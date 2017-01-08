@@ -66,21 +66,21 @@ int main(int argc, char *argv[]) {
 
     // Bit of a hack to allow x86 to
     // get size of x64 and vise-versa
-    // x86 file header is 248 bytes
-    // x64 file header is 258 bytes
+    // x86 IMAGE_NT_HEADERS is 248 bytes
+    // x64 IMAGE_NT_HEADERS is 264 bytes
     DWORD dwExpanded = 0;
 
     // Detect type of executable size
     switch (pFileHeader->Machine) {
     case(IMAGE_FILE_MACHINE_I386):
 #if _X64
-        dwExpanded = 0xFFFFFFF0;
+        dwExpanded = -16;
 #endif
         std::cout << "Executable is x86." << std::endl;
         break;
     case(IMAGE_FILE_MACHINE_AMD64):
 #if _X86
-        dwExpanded = 0x10;
+        dwExpanded = 16;
 #endif
         std::cout << "Executable is x64." << std::endl;
         break;
@@ -109,6 +109,8 @@ int main(int argc, char *argv[]) {
     } else {
         std::cout << "Executable file does not have any data appended to it." << std::endl;
     }
+
+    std::cout << sizeof(IMAGE_NT_HEADERS) << std::endl;
 
     std::cout << "Executable file size: " << dwFileSize << " bytes." << std::endl;
     std::cout << "Executable image size: " << dwImageSize << " bytes." << std::endl;
