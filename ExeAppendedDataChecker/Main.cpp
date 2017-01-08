@@ -113,4 +113,6 @@ int main(int argc, char *argv[]) {
     std::cout << "Executable file size: " << dwFileSize << " bytes." << std::endl;
     std::cout << "Executable image size: " << dwImageSize << " bytes." << std::endl;
     std::cout << "Appended data size: " << dwAppendedDataSize << " bytes." << std::endl;
+
+    return 0;
 }
