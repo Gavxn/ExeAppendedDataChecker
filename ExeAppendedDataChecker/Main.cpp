@@ -12,9 +12,8 @@ std::string getError() {
         nullptr, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), reinterpret_cast<char*>(&pBuffer), 0, nullptr);
 
     if (dwSize > 0) {
-        auto deleter = [](void* pAllocatedMemory) { HeapFree(GetProcessHeap(), 0, pAllocatedMemory); };
-        std::unique_ptr<char, decltype(deleter)> szMessage(pBuffer, deleter);
-        return std::string(szMessage.get(), dwSize);
+        return std::string(pBuffer, dwSize);
+        LocalFree(pBuffer);
     }
 
     return std::string("Unable to fetch error message");
@@ -92,14 +91,7 @@ int main(int argc, char *argv[]) {
     // We need to get the offset for where the NT headers
     // begin and add their size to get the first section offset
     DWORD dwFirstSectionOffset = pDosHeader->e_lfanew + sizeof(IMAGE_NT_HEADERS) + dwExpanded;
-    std::vector<PIMAGE_SECTION_HEADER> sectionHeaders(pFileHeader->NumberOfSections);
-
-    for (int i = 0; i < pFileHeader->NumberOfSections; i++) {
-        DWORD dwNextSectionOffset = dwFirstSectionOffset + (i * sizeof(IMAGE_SECTION_HEADER));
-        sectionHeaders[i] = (PIMAGE_SECTION_HEADER)(&pFileBuffer[dwNextSectionOffset]);
-    }
-
-    PIMAGE_SECTION_HEADER pLastSection = sectionHeaders.back();
+    PIMAGE_SECTION_HEADER pLastSection = (PIMAGE_SECTION_HEADER)&pFileBuffer[dwFirstSectionOffset + (pFileHeader->NumberOfSections - 1) * sizeof(IMAGE_SECTION_HEADER)];
 
     DWORD dwImageSize = pLastSection->PointerToRawData + pLastSection->SizeOfRawData;
     DWORD dwAppendedDataSize = dwFileSize - dwImageSize;
