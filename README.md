@@ -1,6 +1,6 @@
-# ExeAppendedDataChecker
+# pe_appended
 
-Usage: `ExeAppendedDataChecker.exe "/directory/file.exe"`
+Usage: `pe_appended.exe "/directory/file.exe"`
 
 A portable executable (PE or ".exe") contains an executable image. It can also contain abitrary data appended to the end. This tool can:
 
