@@ -75,14 +75,14 @@ int main(int argc, char *argv[]) {
 
     // We need to get the offset for where the NT headers
     // begin and add their size to get the first section offset
-    uint32_t dwFirstSectionOffset = dos_header->e_lfanew + sizeof(IMAGE_NT_HEADERS) + mode_adjust;
-    auto last_section = (PIMAGE_SECTION_HEADER) &raw_buffer[dwFirstSectionOffset + (file_header->NumberOfSections - 1) *
+    uint32_t first_section_offset = dos_header->e_lfanew + sizeof(IMAGE_NT_HEADERS) + mode_adjust;
+    auto last_section = (PIMAGE_SECTION_HEADER) &raw_buffer[first_section_offset + (file_header->NumberOfSections - 1) *
                                                                                    sizeof(IMAGE_SECTION_HEADER)];
 
     uint32_t image_size = last_section->PointerToRawData + last_section->SizeOfRawData;
-    uint64_t dwAppendedDataSize = file_buffer.size() - image_size;
+    uint64_t appended_data_size = file_buffer.size() - image_size;
 
-    if (dwAppendedDataSize > 0) {
+    if (appended_data_size > 0) {
         std::cout << "Executable file has data appended to it." << std::endl;
     } else {
         std::cout << "Executable file does not have any data appended to it." << std::endl;
@@ -90,7 +90,7 @@ int main(int argc, char *argv[]) {
 
     std::cout << "Executable file size: " << file_buffer.size() << " bytes." << std::endl
               << "Executable image size: " << image_size << " bytes." << std::endl
-              << "Appended data size: " << dwAppendedDataSize << " bytes." << std::endl;
+              << "Appended data size: " << appended_data_size << " bytes." << std::endl;
 
     return 0;
 }
