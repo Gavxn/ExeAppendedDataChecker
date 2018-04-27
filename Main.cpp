@@ -115,18 +115,6 @@ typedef struct {
 } OptionalHeaderX64;
 
 typedef struct {
-    uint32_t signature;
-    CoffHeader *coff_header;
-    OptionalHeaderX86 *optional_header_x64;
-} NtHeadersX64;
-
-typedef struct {
-    uint32_t signature;
-    CoffHeader *coff_header;
-    OptionalHeaderX64 *optional_header_x86;
-} NtHeadersX86;
-
-typedef struct {
     uint8_t name[section_name_size];
     union {
         uint32_t physical_address;
@@ -167,57 +155,45 @@ int main(int argc, char *argv[]) {
     file_buffer.resize((uint32_t) size);
 
     if (!file_stream.read(file_buffer.data(), size)) {
-        std::cout << "Could not get file size." << std::endl;
+        std::cout << "Could not read file." << std::endl;
         return 1;
     }
 
     const auto *raw_buffer = file_buffer.data();
+    auto dos_header = (DosHeader *) raw_buffer;
 
-    // Portable Executable headers
-    auto dos_header = (PIMAGE_DOS_HEADER) raw_buffer;
-    auto nt_header = (PIMAGE_NT_HEADERS) &raw_buffer[dos_header->e_lfanew];
-    auto file_header = (PIMAGE_FILE_HEADER) &nt_header->FileHeader;
+    uint16_t e_magic_short = ((uint16_t) dos_header->e_magic[1]) << 8;
+    e_magic_short = e_magic_short | dos_header->e_magic[0];
 
-    if (dos_header->e_magic != 0x5A4D) {
+    if (e_magic_short != 0x5A4D) {
         std::cout << "DOS header is corrupt." << std::endl;
         return 1;
     }
 
-    // Bit of a hack to allow x86 to
-    // get size of x64 and vise-versa
-    // x86 IMAGE_NT_HEADERS is 248 bytes
-    // x64 IMAGE_NT_HEADERS is 264 bytes
-    uint32_t mode_adjust = 0;
+    // The 32 bit value is the NT signature (signature, then COFF header, finally optional header)
+    auto coff_header = (CoffHeader *) &raw_buffer[dos_header->e_lfanew + sizeof(uint32_t)];
+    // This points to the optional header
+    uint32_t first_section_offset = dos_header->e_lfanew + sizeof(uint32_t) + sizeof(*coff_header);
 
-    // Detect type of executable size
-    switch (file_header->Machine) {
-        case (IMAGE_FILE_MACHINE_I386):
-#if _X64
-            mode_adjust = -16;
-#endif
+    // Detect type of executable size and skip the optional header
+    switch (coff_header->machine) {
+        case (ordinal_flag_x86):
             std::cout << "Executable is x86." << std::endl;
+            first_section_offset += sizeof(OptionalHeaderX86);
             break;
-        case (IMAGE_FILE_MACHINE_AMD64):
-#if _X86
-            mode_adjust = 16;
-#endif
+        case (ordinal_flag_x64):
+            first_section_offset += sizeof(OptionalHeaderX64);
             std::cout << "Executable is x64." << std::endl;
             break;
-        case (IMAGE_FILE_MACHINE_IA64):
-            std::cout << "Cannot interpret IA-64 executables." << std::endl;
-            return 1;
         default:
             std::cout << "Unknown executable target architecture." << std::endl;
             return 1;
     }
 
-    // We need to get the offset for where the NT headers
-    // begin and add their size to get the first section offset
-    uint32_t first_section_offset = dos_header->e_lfanew + sizeof(IMAGE_NT_HEADERS) + mode_adjust;
-    auto last_section = (PIMAGE_SECTION_HEADER) &raw_buffer[first_section_offset + (file_header->NumberOfSections - 1) *
-                                                                                   sizeof(IMAGE_SECTION_HEADER)];
+    auto offset = first_section_offset + ((coff_header->number_of_sections - 1) * sizeof(SectionHeader));
+    auto last_section = (SectionHeader *) &raw_buffer[offset];
 
-    uint32_t image_size = last_section->PointerToRawData + last_section->SizeOfRawData;
+    uint32_t image_size = last_section->pointer_to_raw_data + last_section->size_of_raw_data;
     uint64_t appended_data_size = file_buffer.size() - image_size;
 
     if (appended_data_size > 0) {
