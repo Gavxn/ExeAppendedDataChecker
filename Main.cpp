@@ -5,8 +5,9 @@
 
 const uint32_t directory_count = 16;
 const uint32_t section_name_size = 8;
-const uint16_t ordinal_flag_x86 = 0x014C;
-const uint16_t ordinal_flag_x64 = 0x8664;
+const uint16_t x86 = 0x014C;
+const uint16_t x64 = 0x8664;
+const uint16_t dos_signature = 0x5A4D;
 
 typedef struct {
     uint8_t e_magic[2];
@@ -145,13 +146,13 @@ int main(int argc, char *argv[]) {
 
     std::vector<char> file_buffer;
     std::streamsize size = file_stream.tellg();
-    file_stream.seekg(0, std::ios::beg);
 
     if (size <= 0) {
         std::cout << "Could not get file size." << std::endl;
         return 1;
     }
 
+    file_stream.seekg(0, std::ios::beg);
     file_buffer.resize((uint32_t) size);
 
     if (!file_stream.read(file_buffer.data(), size)) {
@@ -165,7 +166,7 @@ int main(int argc, char *argv[]) {
     uint16_t e_magic_short = ((uint16_t) dos_header->e_magic[1]) << 8;
     e_magic_short = e_magic_short | dos_header->e_magic[0];
 
-    if (e_magic_short != 0x5A4D) {
+    if (e_magic_short != dos_signature) {
         std::cout << "DOS header is corrupt." << std::endl;
         return 1;
     }
@@ -177,11 +178,11 @@ int main(int argc, char *argv[]) {
 
     // Detect type of executable size and skip the optional header
     switch (coff_header->machine) {
-        case (ordinal_flag_x86):
+        case (x86):
             std::cout << "Executable is x86." << std::endl;
             first_section_offset += sizeof(OptionalHeaderX86);
             break;
-        case (ordinal_flag_x64):
+        case (x64):
             first_section_offset += sizeof(OptionalHeaderX64);
             std::cout << "Executable is x64." << std::endl;
             break;
