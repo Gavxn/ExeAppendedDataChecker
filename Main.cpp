@@ -139,7 +139,7 @@ int main(int argc, char *argv[]) {
 
     std::ifstream file_stream(argv[1], std::ios::binary | std::ios::ate);
 
-    if (!file_stream.is_open()) {
+    if (!file_stream.is_open() || file_stream.fail()) {
         std::cout << "Could not open file." << std::endl;
         return 1;
     }
