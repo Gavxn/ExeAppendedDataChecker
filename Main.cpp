@@ -174,25 +174,27 @@ int main(int argc, char *argv[]) {
     // The 32 bit value is the NT signature (signature, then COFF header, finally optional header)
     auto coff_header = (CoffHeader *) &raw_buffer[dos_header->e_lfanew + sizeof(uint32_t)];
     // This points to the optional header
-    uint32_t first_section_offset = dos_header->e_lfanew + sizeof(uint32_t) + sizeof(*coff_header);
+    auto optional_header_offset = dos_header->e_lfanew + sizeof(uint32_t) + sizeof(*coff_header);
+    auto optional_header_size = 0;
 
     // Detect type of executable size and skip the optional header
     switch (coff_header->machine) {
         case (x86):
             std::cout << "Executable is x86." << std::endl;
-            first_section_offset += sizeof(OptionalHeaderX86);
+            optional_header_size += sizeof(OptionalHeaderX86);
             break;
         case (x64):
-            first_section_offset += sizeof(OptionalHeaderX64);
             std::cout << "Executable is x64." << std::endl;
+            optional_header_size += sizeof(OptionalHeaderX64);
             break;
         default:
             std::cout << "Unknown executable target architecture." << std::endl;
             return 1;
     }
 
-    auto offset = first_section_offset + ((coff_header->number_of_sections - 1) * sizeof(SectionHeader));
-    auto last_section = (SectionHeader *) &raw_buffer[offset];
+    auto last_section_offset = optional_header_offset + optional_header_size;
+    last_section_offset += ((coff_header->number_of_sections - 1) * sizeof(SectionHeader));
+    auto last_section = (SectionHeader *) &raw_buffer[last_section_offset];
 
     uint32_t image_size = last_section->pointer_to_raw_data + last_section->size_of_raw_data;
     uint64_t appended_data_size = file_buffer.size() - image_size;
