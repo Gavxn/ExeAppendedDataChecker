@@ -43,7 +43,7 @@ typedef struct {
 
 typedef struct {
     uint32_t virtual_address;
-    uint32_t Size;
+    uint32_t size;
 } DataDirectory;
 
 typedef struct {
